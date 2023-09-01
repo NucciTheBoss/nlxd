@@ -12,5 +12,30 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod instance;
-mod client;
+enum EventType {
+    All,
+    Operation,
+    Logging,
+    Lifecycle,
+}
+
+struct Cert {
+    cert: String,
+    key: String,
+}
+
+struct Client {
+    endpoint: String,
+    version: String,
+    verify: bool,  // Could also potentially be a string - need to figure out how to do that
+    timeout: f32,  // Could also be a tuple.
+    project: String,
+    session: Session,  // Should be a custom data type possibly
+}
+
+impl Client {
+    pub fn connect(&mut self) {
+        // TODO: Connect to the LXD REST API.
+        //  Try to just pull up some basic info after connecting to the REST API.
+    }
+}
