@@ -33,7 +33,7 @@ struct Client {
     session: Session, // Should be a custom data type possibly
 }
 
-type Session = (); // TODO: remove me!
+type Session = (); // TODO: implement me!
 
 impl Client {
     pub fn connect(&mut self) {
