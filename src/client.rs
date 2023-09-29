@@ -27,11 +27,13 @@ struct Cert {
 struct Client {
     endpoint: String,
     version: String,
-    verify: bool,  // Could also potentially be a string - need to figure out how to do that
-    timeout: f32,  // Could also be a tuple.
+    verify: bool, // Could also potentially be a string - need to figure out how to do that
+    timeout: f32, // Could also be a tuple.
     project: String,
-    session: Session,  // Should be a custom data type possibly
+    session: Session, // Should be a custom data type possibly
 }
+
+type Session = (); // TODO: implement me!
 
 impl Client {
     pub fn connect(&mut self) {
