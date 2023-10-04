@@ -15,6 +15,7 @@
 //! Interact with LXD instances.
 
 // I have no idea if half of these should be strings but oh well
+#[allow(unused)]
 pub struct Instance {
     name: String, // TODO: Ensure that this is read-only
     description: String,
