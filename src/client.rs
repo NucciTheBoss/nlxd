@@ -61,6 +61,7 @@ impl Timeouts {
     }
 }
 
+#[allow(unused)]
 struct ClientConfig {
     pub endpoint: Endpoint, // address to lxd server e.g. http:./// or unix socket
     pub version: LxdAPIVersion,
@@ -91,14 +92,27 @@ impl Client {
     }
 }
 
-impl From<ClientConfig> for Client {
-    fn from(cfg: ClientConfig) -> Self {
-        Self {
-            endpoint: cfg.endpoint,
-            version: cfg.version,
-            verify: cfg.verify,
-            timeout_seconds: cfg.timeout_seconds,
-            project: cfg.project.unwrap_or("default".into()),
-        }
-    }
+// example function demonstrating using isahc http library with interchangable unix domain socket
+// or standard http/https host.
+use isahc::{config::Dialer, prelude::*, Request};
+pub fn get_server_info(host: &str) -> String {
+    let path = "/1.0";
+
+    let (request, host) = if let Some(prefix) = host.strip_prefix("unix:") {
+        let socket = Dialer::unix_socket(prefix.to_string());
+        // host is arbitrarily set to 'lxd' - ignored, but required as part of the http spec
+        (Request::builder().dial(socket), "http://lxd")
+    } else {
+        (Request::builder(), host)
+    };
+
+    let uri = format!("{}{}", host, path);
+    let mut response = request
+        .uri(uri)
+        .method("GET")
+        .body(())
+        .unwrap()
+        .send()
+        .unwrap();
+    response.text().unwrap()
 }
