@@ -13,4 +13,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod client;
+mod error;
 mod instance;
+mod result;
+
+pub use crate::{error::Error, result::Result};

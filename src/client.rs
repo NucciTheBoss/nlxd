@@ -12,6 +12,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::Result;
+
 #[allow(unused)]
 enum EventType {
     All,
@@ -82,9 +84,10 @@ struct Client {
 
 impl Client {
     #[allow(unused)]
-    pub fn connect(&mut self) {
+    pub fn connect(&mut self) -> Result<()> {
         // TODO: Connect to the LXD REST API.
         //  Try to just pull up some basic info after connecting to the REST API.
+        todo!()
     }
 }
 
