@@ -12,7 +12,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::Result;
+use isahc::{config::Dialer, prelude::*, HttpClient, Request};
+use serde::de::DeserializeOwned;
+use serde::Deserialize;
+
+use crate::{instance::Instance, Result};
 
 #[allow(unused)]
 enum EventType {
@@ -29,24 +33,40 @@ struct Cert {
 }
 
 #[allow(unused)]
-enum Endpoint {
+pub enum Endpoint {
     Http(String),
     UnixSocket(String),
 }
 
-#[allow(unused)]
-enum LxdAPIVersion {
+impl Default for Endpoint {
+    fn default() -> Self {
+        // TODO: implement default for endpoint, autodetecting the local lxd socket
+        Endpoint::UnixSocket("/var/snap/lxd/common/lxd/unix.socket".to_owned())
+    }
+}
+
+// TODO: remove the api version config?
+#[derive(Default)]
+pub enum LxdAPIVersion {
+    #[default]
     V1_0,
-    // TODO: complete me!
+}
+
+impl LxdAPIVersion {
+    fn to_url_segment(&self) -> &'static str {
+        match self {
+            LxdAPIVersion::V1_0 => "/1.0",
+        }
+    }
 }
 
 #[allow(unused)]
-struct Timeouts {
+pub struct Timeout {
     server_timeout_seconds: u32,
     connection_timeout_seconds: u32,
 }
 
-impl Timeouts {
+impl Timeout {
     #[allow(unused)]
     pub fn new(server_timeout_seconds: u32, connection_timeout_seconds: u32) -> Self {
         Self {
@@ -61,16 +81,57 @@ impl Timeouts {
     }
 }
 
-#[allow(unused)]
-struct ClientConfig {
-    pub endpoint: Endpoint, // address to lxd server e.g. http:./// or unix socket
-    pub version: LxdAPIVersion,
-    pub verify: bool, // Could also potentially be a string - need to figure out how to do that
-    pub timeout_seconds: Option<Timeouts>, // Could also be a tuple.
-    pub project: Option<String>,
+impl Default for Timeout {
+    fn default() -> Self {
+        Self {
+            server_timeout_seconds: 60,
+            connection_timeout_seconds: 60,
+        }
+    }
 }
 
-struct Client {
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ResponseType {
+    Sync,
+    Async,
+    Error,
+}
+
+#[derive(Debug, Deserialize)]
+struct Response<T> {
+    metadata: T,
+    #[allow(unused)]
+    status: String,
+    #[allow(unused)]
+    #[serde(rename = "type")]
+    response_type: ResponseType,
+    #[allow(unused)]
+    // TODO: enum based on https://documentation.ubuntu.com/lxd/en/latest/rest-api/#list-of-current-status-codes
+    status_code: u32,
+}
+
+pub struct ClientConfig {
+    pub endpoint: Endpoint,
+    pub version: LxdAPIVersion,
+    pub verify: bool,
+    pub timeout: Timeout,
+    pub project: String,
+}
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: Endpoint::default(),
+            version: LxdAPIVersion::default(),
+            verify: true,
+            timeout: Timeout::default(),
+            project: "default".to_owned(),
+        }
+    }
+}
+
+pub struct Client {
     #[allow(unused)]
     endpoint: Endpoint, // address to lxd server e.g. http:./// or unix socket
     #[allow(unused)]
@@ -78,9 +139,11 @@ struct Client {
     #[allow(unused)]
     verify: bool, // Could also potentially be a string - need to figure out how to do that
     #[allow(unused)]
-    timeout_seconds: Option<Timeouts>, // Could also be a tuple.
+    timeout: Timeout,
     #[allow(unused)]
     project: String,
+    #[allow(unused)]
+    client: HttpClient,
 }
 
 impl Client {
@@ -90,29 +153,53 @@ impl Client {
         //  Try to just pull up some basic info after connecting to the REST API.
         todo!()
     }
-}
 
-// example function demonstrating using isahc http library with interchangable unix domain socket
-// or standard http/https host.
-use isahc::{config::Dialer, prelude::*, Request};
-pub fn get_server_info(host: &str) -> String {
-    let path = "/1.0";
+    pub fn new(config: ClientConfig) -> Result<Self> {
+        Ok(Self {
+            endpoint: config.endpoint,
+            version: config.version,
+            timeout: config.timeout,
+            project: config.project,
+            verify: config.verify,
+            client: HttpClient::new()?,
+        })
+    }
 
-    let (request, host) = if let Some(prefix) = host.strip_prefix("unix:") {
-        let socket = Dialer::unix_socket(prefix.to_string());
-        // host is arbitrarily set to 'lxd' - ignored, but required as part of the http spec
-        (Request::builder().dial(socket), "http://lxd")
-    } else {
-        (Request::builder(), host)
-    };
+    // `path` is expected to begin with a slash
+    fn get<T>(&self, path: &str) -> Result<Response<T>>
+    where
+        T: DeserializeOwned,
+    {
+        let (request_builder, host) = match &self.endpoint {
+            Endpoint::Http(host) => {
+                // TODO: https requests will need some kind of authentication
+                (Request::builder(), host.as_str())
+            }
+            Endpoint::UnixSocket(host) => {
+                let socket = Dialer::unix_socket(host);
+                // host is arbitrarily set to 'lxd' - ignored, but required as part of the http spec
+                (Request::builder().dial(socket), "http://lxd")
+            }
+        };
 
-    let uri = format!("{}{}", host, path);
-    let mut response = request
-        .uri(uri)
-        .method("GET")
-        .body(())
-        .unwrap()
-        .send()
-        .unwrap();
-    response.text().unwrap()
+        let uri = format!("{}{}", host, path);
+        let mut response = request_builder
+            .uri(uri)
+            .method("GET")
+            .body(())
+            .unwrap()
+            .send()
+            .unwrap();
+        Ok(response.json()?)
+    }
+
+    pub fn instances(&self) -> Result<Vec<String>> {
+        Ok(self
+            .get(&format!("{}/instances", self.version.to_url_segment()))?
+            .metadata)
+    }
+
+    pub fn get_instance(&self, name: &str) -> Result<Instance> {
+        Ok(self.get(name)?.metadata)
+    }
 }
