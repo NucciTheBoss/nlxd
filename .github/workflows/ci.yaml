@@ -6,6 +6,8 @@ on:
     branches:
       - main
 
+# NOTE: keep these in sync with Makefile targets,
+# so developers can run ci-equivalent tests locally.
 jobs:
   build:
     name: Build nlxd
