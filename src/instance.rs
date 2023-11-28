@@ -14,26 +14,47 @@
 
 //! Interact with LXD instances.
 
-// I have no idea if half of these should be strings but oh well
+use std::collections::HashMap;
+
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum InstanceType {
+    Container,
+    VirtualMachine,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Device {
+    Disk {
+        path: String,
+        // TODO: check if source and pool are mutually exclusive - if so, use an enum
+        source: Option<String>,
+        pool: Option<String>,
+    },
+    Nic {
+        name: String,
+        network: String,
+    },
+}
+
+// TODO: deny unknown fields once Instance type is complete
+// #[serde(deny_unknown_fields)]
 #[allow(unused)]
+#[derive(Debug, Deserialize)]
 pub struct Instance {
-    name: String, // TODO: Ensure that this is read-only
-    description: String,
-    architecture: String,
-    created_at: String,
-    config: String,
-    ephemeral: bool,
-    devices: String,
-    expanded_config: String,
-    expanded_devices: String,
-    profiles: String,
-    status: String,        // TODO: Ensure that this is read-only
-    last_used_at: String,  // TODO: Ensure that this is read-only
-    location: String,      // TODO: Ensure that this is read-only
-    instance_type: String, // TODO: Ensure that this is read-only
-    project: String,       // TODO: Ensure this is read-only and optional.
-    status_code: String,   // TODO: Ensure that this is read-only
-    stateful: String,      // TODO: Ensure that this is read-only
-    snapshots: String,
-    files: String,
+    name: String,
+    project: String,
+    stateful: bool,
+    status: String,   // TODO: could be an enum
+    status_code: u32, // TODO: maybe also an enum?
+    location: String,
+    profiles: Vec<String>,
+    #[serde(rename = "type")]
+    instance_type: InstanceType,
+    last_used_at: String, // TODO: datetime type
+    expanded_devices: HashMap<String, Device>,
+    // TODO: the remaining fields
 }

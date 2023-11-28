@@ -24,4 +24,10 @@ impl Display for Error {
 }
 
 #[derive(thiserror::Error, Debug)]
-enum ErrorImpl {}
+enum ErrorImpl {
+    #[error("json deserialization error")]
+    JsonError(#[from] serde_json::error::Error),
+
+    #[error("isahc web client error")]
+    IsahcError(#[from] isahc::Error),
+}
