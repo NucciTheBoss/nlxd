@@ -98,6 +98,7 @@ enum ResponseType {
     Error,
 }
 
+// TODO: turn this into an enum based on the three standard return types: https://documentation.ubuntu.com/lxd/en/latest/rest-api/#return-values
 #[derive(Debug, Deserialize)]
 struct Response<T> {
     metadata: T,
@@ -107,7 +108,7 @@ struct Response<T> {
     #[serde(rename = "type")]
     response_type: ResponseType,
     #[allow(unused)]
-    // TODO: enum based on https://documentation.ubuntu.com/lxd/en/latest/rest-api/#list-of-current-status-codes
+    // TODO: enum for http codes - use serde_repr
     status_code: u32,
 }
 
@@ -193,12 +194,14 @@ impl Client {
         Ok(response.json()?)
     }
 
+    /// Get a list of instance names
     pub fn instances(&self) -> Result<Vec<String>> {
         Ok(self
             .get(&format!("{}/instances", self.version.to_url_segment()))?
             .metadata)
     }
 
+    /// Get an instance's by instance name.
     pub fn get_instance(&self, name: &str) -> Result<Instance> {
         Ok(self.get(name)?.metadata)
     }
