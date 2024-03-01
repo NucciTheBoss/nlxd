@@ -14,7 +14,8 @@
 
 pub mod client;
 mod error;
-mod instance;
+pub mod instance;
 mod result;
+mod types;
 
 pub use crate::{error::Error, result::Result};
