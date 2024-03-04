@@ -194,14 +194,14 @@ impl Client {
         Ok(response.json()?)
     }
 
-    /// Get a list of instance names
+    /// Get a list of instance names.
     pub fn instances(&self) -> Result<Vec<String>> {
         Ok(self
             .get(&format!("{}/instances", self.version.to_url_segment()))?
             .metadata)
     }
 
-    /// Get an instance's by instance name.
+    /// Try to get an instance by its name.
     pub fn get_instance(&self, name: &str) -> Result<Instance> {
         Ok(self.get(name)?.metadata)
     }

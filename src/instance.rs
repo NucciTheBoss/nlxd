@@ -42,20 +42,11 @@ pub enum Device {
     },
 }
 
-#[derive(Debug, Deserialize)]
-pub enum InstanceStatus {
-    Running,
-    Stopped,
-    Frozen,
-    Error,
-}
-
-/// Status code from the REST API.
-/// This is not for HTTP status codes.
+/// Code from the REST API for instance status.
 /// Codes documented at https://documentation.ubuntu.com/lxd/en/latest/rest-api/#status-codes
 #[derive(Debug, Deserialize_repr)]
 #[repr(u16)]
-pub enum StatusCode {
+pub enum InstanceStatus {
     OperationCreated = 100,
     Started = 101,
     Stopped = 102,
@@ -77,10 +68,10 @@ pub enum StatusCode {
 
 #[allow(unused)]
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct Instance {
     architecture: String,
-    config: HashMap<String, String>, // TODO: is config completely described - can we use a struct?
+    // TODO: determine if config is completely described.  If so, we can potentially use a struct.
+    config: HashMap<String, String>,
     created_at: DateTime<Utc>,
     description: String,
     devices: HashMap<String, Device>,
@@ -93,8 +84,8 @@ pub struct Instance {
     profiles: Vec<String>,
     project: String,
     stateful: bool,
-    status: InstanceStatus, // TODO: not sure if this string is consistent (could have i18n?)
-    status_code: StatusCode,
+    #[serde(rename = "status_code")]
+    status: InstanceStatus,
     #[serde(rename = "type")]
     instance_type: InstanceType,
 }
