@@ -15,6 +15,7 @@
 use isahc::{config::Dialer, prelude::*, HttpClient, Request};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use std::{env, path::PathBuf};
 
 use crate::{instance::Instance, Result};
 
@@ -35,13 +36,44 @@ struct Cert {
 #[allow(unused)]
 pub enum Endpoint {
     Http(String),
-    UnixSocket(String),
+    UnixSocket(PathBuf),
+}
+
+/// Return the environment variable if set and nonempty, else None.
+fn nonempty_env_var(key: &str) -> Option<String> {
+    match env::var(key) {
+        Ok(v) => {
+            if v.is_empty() {
+                None
+            } else {
+                Some(v)
+            }
+        }
+        Err(_) => None,
+    }
 }
 
 impl Default for Endpoint {
+    /// Autodetect the unix socket path for the local lxd daemon.
+    /// It will return the first that satisfies:
+    /// 1. `LXD_SOCKET` env var if set to a nonempty string
+    /// 2. `LXD_DIR` env var if set to a nonempty string
+    /// 3. `/var/snap/lxd/common/lxd/unix.socket` (lxd snap) if path exists
+    /// 4. otherwise fall back to `/var/snap/lxd/common/lxd/unix.socket` (lxd package)
     fn default() -> Self {
-        // TODO: implement default for endpoint, autodetecting the local lxd socket
-        Endpoint::UnixSocket("/var/snap/lxd/common/lxd/unix.socket".to_owned())
+        let lxd_snap_socket_path = PathBuf::from("/var/snap/lxd/common/lxd/unix.socket");
+        let lxd_package_socket_path = PathBuf::from("/var/snap/lxd/common/lxd/unix.socket");
+
+        let socket: PathBuf = if let Some(socket) = nonempty_env_var("LXD_SOCKET") {
+            PathBuf::from(socket)
+        } else if let Some(lxd_dir) = nonempty_env_var("LXD_DIR") {
+            PathBuf::from(&lxd_dir).join("unix.socket")
+        } else if lxd_snap_socket_path.exists() {
+            lxd_snap_socket_path
+        } else {
+            lxd_package_socket_path
+        };
+        Endpoint::UnixSocket(socket)
     }
 }
 
