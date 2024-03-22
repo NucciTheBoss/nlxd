@@ -16,6 +16,7 @@ use isahc::{config::Dialer, prelude::*, HttpClient, Request};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
+use crate::images::Image;
 use crate::{instance::Instance, Result};
 
 #[allow(unused)]
@@ -201,5 +202,25 @@ impl Client {
 
     pub fn get_instance(&self, name: &str) -> Result<Instance> {
         Ok(self.get(name)?.metadata)
+    }
+
+    /// Get a list of image IDs
+    pub fn images(&self) -> Result<Vec<String>> {
+        Ok(self
+            .get::<Vec<String>>(&format!("{}/images", self.version.to_url_segment()))?
+            .metadata
+            .into_iter()
+            .filter_map(|s| s.strip_prefix("/1.0/images/").map(|s| s.to_owned()))
+            .collect())
+    }
+
+    pub fn get_image(&self, fingerprint: &str) -> Result<Image> {
+        Ok(self
+            .get(&format!(
+                "{}/images/{}",
+                self.version.to_url_segment(),
+                fingerprint
+            ))?
+            .metadata)
     }
 }

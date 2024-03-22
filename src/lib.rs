@@ -14,6 +14,7 @@
 
 pub mod client;
 mod error;
+mod images;
 mod instance;
 mod result;
 
